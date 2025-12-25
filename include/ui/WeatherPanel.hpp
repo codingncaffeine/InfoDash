@@ -1,0 +1,29 @@
+#pragma once
+#include <gtk/gtk.h>
+#include <memory>
+#include <vector>
+#include "services/WeatherService.hpp"
+
+namespace InfoDash {
+
+class WeatherPanel {
+public:
+    WeatherPanel();
+    ~WeatherPanel();
+    GtkWidget* getWidget() const { return widget_; }
+    void refresh();
+
+private:
+    void setupUI();
+    void updateWeather(const std::vector<WeatherData>& data);
+    static void onAddLocationClicked(GtkButton* button, gpointer userData);
+    static gboolean updateUICallback(gpointer userData);
+
+    GtkWidget* widget_;
+    GtkWidget* weatherBox_;
+    GtkWidget* zipEntry_;
+    std::unique_ptr<WeatherService> service_;
+    std::vector<WeatherData> pendingData_;
+};
+
+}
