@@ -1,4 +1,4 @@
-# InfoDash v0.07
+# InfoDash v1.0.2
 
 A modern GTK4 dashboard application for Linux that displays RSS feeds, weather, and stock data.
 
@@ -57,7 +57,7 @@ Config stored at `~/.config/infodash/config.json`
 
 ## Changelog
 
-### v0.07
+-### v1.0.2
 - Added multiple weather location support
 - Weather now shows city name with country (e.g., "London, United Kingdom")
 - Added weather condition icons (sun, clouds, rain, snow, thunderstorm)
