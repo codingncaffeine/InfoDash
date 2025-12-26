@@ -82,6 +82,23 @@ static std::string safeGetString(JsonObject* obj, const char* member) {
     return sanitizeUtf8(val);
 }
 
+// URL-encode a string for use in URLs
+static std::string urlEncode(const std::string& str) {
+    std::string result;
+    for (unsigned char c : str) {
+        if (isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~') {
+            result += c;
+        } else if (c == ' ') {
+            result += "%20";
+        } else {
+            char buf[4];
+            snprintf(buf, sizeof(buf), "%%%02X", c);
+            result += buf;
+        }
+    }
+    return result;
+}
+
 // Map wttr.in weather codes to icon names
 std::string WeatherService::getWeatherIcon(const std::string& conditionCode) {
     // wttr.in weather codes: https://github.com/chubin/wttr.in/blob/master/lib/constants.py
@@ -124,8 +141,11 @@ void WeatherService::fetchWeather(const std::string& zipCode, std::function<void
         HttpClient client;
         TempUnit unit = Config::getInstance().getTempUnit();
         
+        // URL-encode the location for the API request
+        std::string encodedLocation = urlEncode(zipCode);
+        
         // Fetch JSON format from wttr.in
-        std::string url = "https://wttr.in/" + zipCode + "?format=j1";
+        std::string url = "https://wttr.in/" + encodedLocation + "?format=j1";
         auto response = client.get(url);
         
         if (response.success && !response.body.empty()) {
@@ -298,7 +318,7 @@ void WeatherService::fetchWeather(const std::string& zipCode, std::function<void
         
         // Fallback if JSON parsing failed
         if (data.temperature.empty()) {
-            std::string simpleUrl = "https://wttr.in/" + zipCode + "?format=%l|%t|%C|%h|%w";
+            std::string simpleUrl = "https://wttr.in/" + encodedLocation + "?format=%l|%t|%C|%h|%w";
             auto simpleResp = client.get(simpleUrl);
             
             if (simpleResp.success && !simpleResp.body.empty()) {

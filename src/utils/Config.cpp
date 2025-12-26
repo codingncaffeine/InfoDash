@@ -1,4 +1,5 @@
 #include "utils/Config.hpp"
+#include "utils/ThemeManager.hpp"
 #include <json-glib/json-glib.h>
 #include <sys/stat.h>
 #include <fstream>
@@ -6,6 +7,9 @@
 #include <cstring>
 
 namespace InfoDash {
+
+ThemePreferences::ThemePreferences() : mode(ThemeMode::Dark), scheme(ColorScheme::Default), customAccentColor("#e94560") {}
+
 
 Config& Config::getInstance() {
     static Config instance;
@@ -203,6 +207,57 @@ void Config::load() {
         }
     }
     
+    // Load theme preferences
+    themePrefs_.mode = ThemeMode::Dark;
+    themePrefs_.scheme = ColorScheme::Default;
+    themePrefs_.customAccentColor = "#e94560";
+    
+    if (json_object_has_member(obj, "theme")) {
+        JsonObject* themeObj = json_object_get_object_member(obj, "theme");
+        
+        if (json_object_has_member(themeObj, "mode")) {
+            const char* mode = json_object_get_string_member(themeObj, "mode");
+            if (mode) {
+                if (strcmp(mode, "light") == 0) themePrefs_.mode = ThemeMode::Light;
+                else if (strcmp(mode, "system") == 0) themePrefs_.mode = ThemeMode::System;
+                else themePrefs_.mode = ThemeMode::Dark;
+            }
+        }
+        
+        if (json_object_has_member(themeObj, "scheme")) {
+            const char* scheme = json_object_get_string_member(themeObj, "scheme");
+            if (scheme) {
+                if (strcmp(scheme, "ocean") == 0) themePrefs_.scheme = ColorScheme::Ocean;
+                else if (strcmp(scheme, "forest") == 0) themePrefs_.scheme = ColorScheme::Forest;
+                else if (strcmp(scheme, "sunset") == 0) themePrefs_.scheme = ColorScheme::Sunset;
+                else if (strcmp(scheme, "midnight") == 0) themePrefs_.scheme = ColorScheme::Midnight;
+                else if (strcmp(scheme, "nord") == 0) themePrefs_.scheme = ColorScheme::Nord;
+                else if (strcmp(scheme, "dracula") == 0) themePrefs_.scheme = ColorScheme::Dracula;
+                else if (strcmp(scheme, "solarized") == 0) themePrefs_.scheme = ColorScheme::Solarized;
+                else if (strcmp(scheme, "rose") == 0) themePrefs_.scheme = ColorScheme::Rose;
+                else if (strcmp(scheme, "custom") == 0) themePrefs_.scheme = ColorScheme::Custom;
+                else themePrefs_.scheme = ColorScheme::Default;
+            }
+        }
+        
+        if (json_object_has_member(themeObj, "customAccentColor")) {
+            themePrefs_.customAccentColor = json_object_get_string_member(themeObj, "customAccentColor");
+        }
+        
+        if (json_object_has_member(themeObj, "customWindowBg")) {
+            themePrefs_.customWindowBg = json_object_get_string_member(themeObj, "customWindowBg");
+        }
+        if (json_object_has_member(themeObj, "customCardBg")) {
+            themePrefs_.customCardBg = json_object_get_string_member(themeObj, "customCardBg");
+        }
+        if (json_object_has_member(themeObj, "customTextPrimary")) {
+            themePrefs_.customTextPrimary = json_object_get_string_member(themeObj, "customTextPrimary");
+        }
+        if (json_object_has_member(themeObj, "customTextSecondary")) {
+            themePrefs_.customTextSecondary = json_object_get_string_member(themeObj, "customTextSecondary");
+        }
+    }
+    
     g_object_unref(parser);
     ensureDefaults();
 }
@@ -294,6 +349,54 @@ void Config::save() {
     // Save layout mode
     json_builder_set_member_name(builder, "layoutMode");
     json_builder_add_string_value(builder, layoutMode_ == LayoutMode::List ? "list" : "cards");
+    
+    // Save theme preferences
+    json_builder_set_member_name(builder, "theme");
+    json_builder_begin_object(builder);
+    
+    json_builder_set_member_name(builder, "mode");
+    const char* modeStr = "dark";
+    if (themePrefs_.mode == ThemeMode::Light) modeStr = "light";
+    else if (themePrefs_.mode == ThemeMode::System) modeStr = "system";
+    json_builder_add_string_value(builder, modeStr);
+    
+    json_builder_set_member_name(builder, "scheme");
+    const char* schemeStr = "default";
+    switch (themePrefs_.scheme) {
+        case ColorScheme::Ocean: schemeStr = "ocean"; break;
+        case ColorScheme::Forest: schemeStr = "forest"; break;
+        case ColorScheme::Sunset: schemeStr = "sunset"; break;
+        case ColorScheme::Midnight: schemeStr = "midnight"; break;
+        case ColorScheme::Nord: schemeStr = "nord"; break;
+        case ColorScheme::Dracula: schemeStr = "dracula"; break;
+        case ColorScheme::Solarized: schemeStr = "solarized"; break;
+        case ColorScheme::Rose: schemeStr = "rose"; break;
+        case ColorScheme::Custom: schemeStr = "custom"; break;
+        default: schemeStr = "default"; break;
+    }
+    json_builder_add_string_value(builder, schemeStr);
+    
+    json_builder_set_member_name(builder, "customAccentColor");
+    json_builder_add_string_value(builder, themePrefs_.customAccentColor.c_str());
+    
+    if (!themePrefs_.customWindowBg.empty()) {
+        json_builder_set_member_name(builder, "customWindowBg");
+        json_builder_add_string_value(builder, themePrefs_.customWindowBg.c_str());
+    }
+    if (!themePrefs_.customCardBg.empty()) {
+        json_builder_set_member_name(builder, "customCardBg");
+        json_builder_add_string_value(builder, themePrefs_.customCardBg.c_str());
+    }
+    if (!themePrefs_.customTextPrimary.empty()) {
+        json_builder_set_member_name(builder, "customTextPrimary");
+        json_builder_add_string_value(builder, themePrefs_.customTextPrimary.c_str());
+    }
+    if (!themePrefs_.customTextSecondary.empty()) {
+        json_builder_set_member_name(builder, "customTextSecondary");
+        json_builder_add_string_value(builder, themePrefs_.customTextSecondary.c_str());
+    }
+    
+    json_builder_end_object(builder);
     
     json_builder_end_object(builder);
     
@@ -540,6 +643,43 @@ LayoutMode Config::getLayoutMode() const {
 
 void Config::setLayoutMode(LayoutMode mode) {
     layoutMode_ = mode;
+    save();
+}
+
+// Theme preferences
+ThemePreferences Config::getThemePreferences() const {
+    return themePrefs_;
+}
+
+void Config::setThemePreferences(const ThemePreferences& prefs) {
+    themePrefs_ = prefs;
+    save();
+}
+
+ThemeMode Config::getThemeMode() const {
+    return themePrefs_.mode;
+}
+
+void Config::setThemeMode(ThemeMode mode) {
+    themePrefs_.mode = mode;
+    save();
+}
+
+ColorScheme Config::getColorScheme() const {
+    return themePrefs_.scheme;
+}
+
+void Config::setColorScheme(ColorScheme scheme) {
+    themePrefs_.scheme = scheme;
+    save();
+}
+
+std::string Config::getCustomAccentColor() const {
+    return themePrefs_.customAccentColor;
+}
+
+void Config::setCustomAccentColor(const std::string& color) {
+    themePrefs_.customAccentColor = color;
     save();
 }
 

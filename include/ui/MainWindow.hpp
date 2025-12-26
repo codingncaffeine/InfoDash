@@ -21,11 +21,13 @@ private:
     void setupUI();
     void setupHeaderBar();
     void setupMainContent();
-    void applyCSS();
+    void showSettingsDialog();
     
     static void onRefreshClicked(GtkButton* button, gpointer userData);
     static void onSettingsClicked(GtkButton* button, gpointer userData);
-
+    static void onModeButtonClicked(GtkButton* button, gpointer dialogPtr);
+    static void onSchemeSelected(GtkFlowBox* flowbox, GtkFlowBoxChild* child, gpointer userData);
+    
     GtkWidget* window_;
     GtkWidget* headerBar_;
     GtkWidget* mainStack_;

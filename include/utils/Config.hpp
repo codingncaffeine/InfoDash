@@ -16,6 +16,10 @@ enum class TempUnit {
     Fahrenheit
 };
 
+// Forward declarations - actual enums in ThemeManager.hpp
+enum class ThemeMode;
+enum class ColorScheme;
+
 struct FeedInfo {
     std::string url;
     std::string name;
@@ -28,6 +32,20 @@ struct Category {
     std::string name;
     std::string icon;
     int order = 0;
+};
+
+// Theme preference storage
+struct ThemePreferences {
+    ThemeMode mode;
+    ColorScheme scheme;
+    std::string customAccentColor = "#e94560";
+    // For custom theme colors
+    std::string customWindowBg;
+    std::string customCardBg;
+    std::string customTextPrimary;
+    std::string customTextSecondary;
+    
+    ThemePreferences();
 };
 
 class Config {
@@ -89,6 +107,16 @@ public:
     LayoutMode getLayoutMode() const;
     void setLayoutMode(LayoutMode mode);
     
+    // Theme preferences
+    ThemePreferences getThemePreferences() const;
+    void setThemePreferences(const ThemePreferences& prefs);
+    ThemeMode getThemeMode() const;
+    void setThemeMode(ThemeMode mode);
+    ColorScheme getColorScheme() const;
+    void setColorScheme(ColorScheme scheme);
+    std::string getCustomAccentColor() const;
+    void setCustomAccentColor(const std::string& color);
+    
     void save();
     void load();
 
@@ -110,6 +138,7 @@ private:
     std::vector<std::string> stockSymbols_;
     LayoutMode layoutMode_ = LayoutMode::Cards;
     TempUnit tempUnit_ = TempUnit::Fahrenheit;
+    ThemePreferences themePrefs_;
 };
 
 }

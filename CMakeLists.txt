@@ -26,6 +26,7 @@ set(SOURCES
     src/utils/HttpClient.cpp
     src/utils/HtmlParser.cpp
     src/utils/Config.cpp
+    src/utils/ThemeManager.cpp
 )
 
 # Header files
@@ -41,6 +42,7 @@ set(HEADERS
     include/utils/HttpClient.hpp
     include/utils/HtmlParser.hpp
     include/utils/Config.hpp
+    include/utils/ThemeManager.hpp
 )
 
 # Create executable
