@@ -5,8 +5,38 @@
 #include <fstream>
 #include <algorithm>
 #include <cstring>
+#include <iostream>
 
 namespace InfoDash {
+
+// Recursively create directories (like mkdir -p)
+static bool createDirectoryRecursive(const std::string& path) {
+    size_t pos = 0;
+    std::string currentPath;
+    
+    while ((pos = path.find('/', pos + 1)) != std::string::npos) {
+        currentPath = path.substr(0, pos);
+        if (!currentPath.empty()) {
+            struct stat st;
+            if (stat(currentPath.c_str(), &st) != 0) {
+                if (mkdir(currentPath.c_str(), 0755) != 0 && errno != EEXIST) {
+                    std::cerr << "Failed to create directory: " << currentPath << std::endl;
+                    return false;
+                }
+            }
+        }
+    }
+    
+    // Create final directory
+    struct stat st;
+    if (stat(path.c_str(), &st) != 0) {
+        if (mkdir(path.c_str(), 0755) != 0 && errno != EEXIST) {
+            std::cerr << "Failed to create directory: " << path << std::endl;
+            return false;
+        }
+    }
+    return true;
+}
 
 ThemePreferences::ThemePreferences() : mode(ThemeMode::Dark), scheme(ColorScheme::Default), customAccentColor("#e94560") {}
 
@@ -21,8 +51,19 @@ Config::Config() : tempUnit_(TempUnit::Fahrenheit) {
 }
 
 std::string Config::getConfigPath() const {
-    const char* home = getenv("HOME");
-    return std::string(home) + "/.config/infodash/config.json";
+    // Respect XDG_CONFIG_HOME if set, otherwise use ~/.config
+    const char* xdgConfig = getenv("XDG_CONFIG_HOME");
+    std::string configBase;
+    
+    if (xdgConfig && xdgConfig[0] != '\0') {
+        configBase = xdgConfig;
+    } else {
+        const char* home = getenv("HOME");
+        if (!home) home = "/tmp";  // Fallback if HOME not set
+        configBase = std::string(home) + "/.config";
+    }
+    
+    return configBase + "/infodash/config.json";
 }
 
 void Config::ensureDefaults() {
@@ -67,8 +108,11 @@ void Config::ensureDefaults() {
 void Config::load() {
     std::string configPath = getConfigPath();
     
+    // Create config directory recursively if it doesn't exist
     std::string dir = configPath.substr(0, configPath.rfind('/'));
-    mkdir(dir.c_str(), 0755);
+    if (!createDirectoryRecursive(dir)) {
+        std::cerr << "Warning: Could not create config directory: " << dir << std::endl;
+    }
     
     JsonParser* parser = json_parser_new();
     GError* error = nullptr;
@@ -263,6 +307,14 @@ void Config::load() {
 }
 
 void Config::save() {
+    // Ensure config directory exists before saving
+    std::string configPath = getConfigPath();
+    std::string dir = configPath.substr(0, configPath.rfind('/'));
+    if (!createDirectoryRecursive(dir)) {
+        std::cerr << "Error: Could not create config directory for saving: " << dir << std::endl;
+        return;
+    }
+    
     JsonBuilder* builder = json_builder_new();
     json_builder_begin_object(builder);
     
@@ -406,8 +458,14 @@ void Config::save() {
     json_generator_set_root(gen, rootNode);
     
     GError* error = nullptr;
-    json_generator_to_file(gen, getConfigPath().c_str(), &error);
-    if (error) g_error_free(error);
+    if (!json_generator_to_file(gen, getConfigPath().c_str(), &error)) {
+        std::cerr << "Error saving config to " << getConfigPath();
+        if (error) {
+            std::cerr << ": " << error->message;
+            g_error_free(error);
+        }
+        std::cerr << std::endl;
+    }
     
     json_node_unref(rootNode);
     g_object_unref(gen);
