@@ -38,7 +38,7 @@ void MainWindow::applyCSS() {
         /* Sidebar styles */
         .sidebar {
             background-color: #16213e;
-            border-right: 1px solid #0f3460;
+            border-color: #0f3460; border-style: solid; border-width: 0 1px 0 0;
         }
         
         .sidebar-title {
@@ -103,7 +103,7 @@ void MainWindow::applyCSS() {
         }
         
         .title-read {
-            color: #888888 !important;
+            color: #888888;
         }
         
         .unread-indicator {
@@ -194,11 +194,11 @@ void MainWindow::applyCSS() {
         
         .boxed-list row {
             background-color: transparent;
-            border-bottom: 1px solid #16213e;
+            border-color: #16213e; border-style: solid; border-width: 0 0 1px 0;
         }
         
         .boxed-list row:last-child {
-            border-bottom: none;
+            border-width: 0;
         }
         
         .heading {
@@ -395,11 +395,13 @@ void MainWindow::applyCSS() {
             border-radius: 8px;
             padding: 12px;
             margin: 4px;
+            min-width: 70px;
         }
         
         .forecast-day-name {
             font-size: 12px;
-            color: #888888;
+            font-weight: bold;
+            color: #e94560;
         }
         
         .forecast-temp-high {
@@ -411,6 +413,78 @@ void MainWindow::applyCSS() {
         .forecast-temp-low {
             font-size: 14px;
             color: #888888;
+        }
+        
+        .forecast-condition {
+            font-size: 10px;
+            color: #aaaaaa;
+            margin: 4px 0;
+        }
+
+        .forecast-header {
+            font-size: 14px;
+            font-weight: bold;
+            color: #888888;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .weather-details {
+            font-size: 13px;
+            color: #888888;
+        }
+
+        .weather-feels {
+            font-size: 13px;
+            color: #aaaaaa;
+        }
+
+        .weather-icon {
+            color: #e94560;
+        }
+
+        .weather-alert {
+            background-color: #8b0000;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 8px;
+        }
+
+        .alert-text {
+            font-size: 13px;
+            font-weight: bold;
+            color: #ffffff;
+        }
+
+        .loading-label {
+            font-size: 14px;
+            color: #888888;
+        }
+
+        .forecast-icon {
+            color: #cccccc;
+        }
+
+        .locations-label {
+            font-size: 12px;
+            color: #888888;
+            margin-right: 4px;
+        }
+
+        .location-tag {
+            background-color: #0f3460;
+            border-radius: 12px;
+            padding: 4px 10px;
+            margin-right: 4px;
+            font-size: 11px;
+            color: #ffffff;
+        }
+
+        .location-remove-btn {
+            min-width: 16px;
+            min-height: 16px;
+            padding: 0;
+            margin-left: 4px;
         }
 
         /* Article card styles */

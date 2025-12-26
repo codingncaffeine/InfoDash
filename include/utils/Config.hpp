@@ -11,6 +11,11 @@ enum class LayoutMode {
     List
 };
 
+enum class TempUnit {
+    Celsius,
+    Fahrenheit
+};
+
 struct FeedInfo {
     std::string url;
     std::string name;
@@ -60,9 +65,18 @@ public:
     void unsaveArticle(const std::string& articleId);
     std::set<std::string> getSavedArticles() const;
     
-    // Weather & Stocks
-    std::string getWeatherLocation() const;
-    void setWeatherLocation(const std::string& location);
+    // Weather locations (multiple)
+    std::vector<std::string> getWeatherLocations() const;
+    void addWeatherLocation(const std::string& location);
+    void removeWeatherLocation(const std::string& location);
+    void setWeatherLocation(const std::string& location); // Legacy - adds if not exists
+    std::string getWeatherLocation() const; // Legacy - returns first
+    
+    // Temperature unit
+    TempUnit getTempUnit() const;
+    void setTempUnit(TempUnit unit);
+    
+    // Stocks
     std::vector<std::string> getStockSymbols() const;
     void addStockSymbol(const std::string& symbol);
     void removeStockSymbol(const std::string& symbol);
@@ -92,9 +106,10 @@ private:
     std::set<std::string> readArticles_;
     std::set<std::string> savedArticles_;
     std::set<std::string> expandedCategories_;
-    std::string weatherLocation_;
+    std::vector<std::string> weatherLocations_;
     std::vector<std::string> stockSymbols_;
     LayoutMode layoutMode_ = LayoutMode::Cards;
+    TempUnit tempUnit_ = TempUnit::Fahrenheit;
 };
 
 }

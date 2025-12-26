@@ -12,7 +12,7 @@ Config& Config::getInstance() {
     return instance;
 }
 
-Config::Config() : weatherLocation_("auto") {
+Config::Config() : tempUnit_(TempUnit::Fahrenheit) {
     load();
 }
 
@@ -24,13 +24,13 @@ std::string Config::getConfigPath() const {
 void Config::ensureDefaults() {
     if (categories_.empty()) {
         categories_ = {
-            {"all", "All Articles", "📰", 0},
-            {"saved", "Saved for Later", "⭐", 1},
-            {"tech", "Technology", "💻", 2},
-            {"science", "Science", "🔬", 3},
-            {"news", "News", "📢", 4},
-            {"gaming", "Gaming", "🎮", 5},
-            {"uncategorized", "Uncategorized", "📁", 99}
+            {"all", "All Articles", "rss-symbolic", 0},
+            {"saved", "Saved for Later", "starred-symbolic", 1},
+            {"tech", "Technology", "computer-symbolic", 2},
+            {"science", "Science", "applications-science-symbolic", 3},
+            {"news", "News", "newspaper-symbolic", 4},
+            {"gaming", "Gaming", "applications-games-symbolic", 5},
+            {"uncategorized", "Uncategorized", "folder-symbolic", 99}
         };
     }
     
@@ -40,7 +40,7 @@ void Config::ensureDefaults() {
         if (c.id == "saved") { hasSaved = true; break; }
     }
     if (!hasSaved) {
-        categories_.insert(categories_.begin() + 1, {"saved", "Saved for Later", "⭐", 1});
+        categories_.insert(categories_.begin() + 1, {"saved", "Saved for Later", "starred-symbolic", 1});
     }
     
     if (feeds_.empty()) {
@@ -53,6 +53,10 @@ void Config::ensureDefaults() {
     
     if (stockSymbols_.empty()) {
         stockSymbols_ = {"AAPL", "GOOGL", "MSFT", "AMZN"};
+    }
+    
+    if (weatherLocations_.empty()) {
+        weatherLocations_ = {"auto"};
     }
 }
 
@@ -92,7 +96,7 @@ void Config::load() {
             Category c;
             c.id = json_object_get_string_member(cat, "id");
             c.name = json_object_get_string_member(cat, "name");
-            c.icon = json_object_has_member(cat, "icon") ? json_object_get_string_member(cat, "icon") : "📁";
+            c.icon = json_object_has_member(cat, "icon") ? json_object_get_string_member(cat, "icon") : "folder-symbolic";
             c.order = json_object_has_member(cat, "order") ? json_object_get_int_member(cat, "order") : i;
             categories_.push_back(c);
         }
@@ -158,9 +162,26 @@ void Config::load() {
         }
     }
     
-    // Load weather location
-    if (json_object_has_member(obj, "weatherLocation")) {
-        weatherLocation_ = json_object_get_string_member(obj, "weatherLocation");
+    // Load weather locations (array) or legacy single location
+    weatherLocations_.clear();
+    if (json_object_has_member(obj, "weatherLocations")) {
+        JsonArray* locArr = json_object_get_array_member(obj, "weatherLocations");
+        guint len = json_array_get_length(locArr);
+        for (guint i = 0; i < len; i++) {
+            weatherLocations_.push_back(json_array_get_string_element(locArr, i));
+        }
+    } else if (json_object_has_member(obj, "weatherLocation")) {
+        // Legacy single location
+        weatherLocations_.push_back(json_object_get_string_member(obj, "weatherLocation"));
+    }
+    
+    // Load temperature unit
+    tempUnit_ = TempUnit::Fahrenheit;
+    if (json_object_has_member(obj, "tempUnit")) {
+        const char* unit = json_object_get_string_member(obj, "tempUnit");
+        if (unit && strcmp(unit, "celsius") == 0) {
+            tempUnit_ = TempUnit::Celsius;
+        }
     }
     
     // Load stock symbols
@@ -250,9 +271,17 @@ void Config::save() {
     }
     json_builder_end_array(builder);
     
-    // Save weather location
-    json_builder_set_member_name(builder, "weatherLocation");
-    json_builder_add_string_value(builder, weatherLocation_.c_str());
+    // Save weather locations (as array)
+    json_builder_set_member_name(builder, "weatherLocations");
+    json_builder_begin_array(builder);
+    for (const auto& loc : weatherLocations_) {
+        json_builder_add_string_value(builder, loc.c_str());
+    }
+    json_builder_end_array(builder);
+    
+    // Save temperature unit
+    json_builder_set_member_name(builder, "tempUnit");
+    json_builder_add_string_value(builder, tempUnit_ == TempUnit::Celsius ? "celsius" : "fahrenheit");
     
     // Save stock symbols
     json_builder_set_member_name(builder, "stockSymbols");
@@ -402,6 +431,7 @@ void Config::markArticleUnread(const std::string& articleId) {
 }
 
 void Config::markAllRead(const std::string& feedUrl) {
+    (void)feedUrl; // Unused for now
     save();
 }
 
@@ -442,13 +472,47 @@ void Config::setCategoryExpanded(const std::string& categoryId, bool expanded) {
     save();
 }
 
-// Weather & Stocks
+// Weather locations
+std::vector<std::string> Config::getWeatherLocations() const {
+    return weatherLocations_;
+}
+
+void Config::addWeatherLocation(const std::string& location) {
+    // Check if already exists
+    for (const auto& loc : weatherLocations_) {
+        if (loc == location) return;
+    }
+    weatherLocations_.push_back(location);
+    save();
+}
+
+void Config::removeWeatherLocation(const std::string& location) {
+    weatherLocations_.erase(
+        std::remove(weatherLocations_.begin(), weatherLocations_.end(), location),
+        weatherLocations_.end());
+    // Ensure at least one location
+    if (weatherLocations_.empty()) {
+        weatherLocations_.push_back("auto");
+    }
+    save();
+}
+
+// Legacy single location support
 std::string Config::getWeatherLocation() const {
-    return weatherLocation_;
+    if (weatherLocations_.empty()) return "auto";
+    return weatherLocations_[0];
 }
 
 void Config::setWeatherLocation(const std::string& location) {
-    weatherLocation_ = location;
+    addWeatherLocation(location);
+}
+
+TempUnit Config::getTempUnit() const {
+    return tempUnit_;
+}
+
+void Config::setTempUnit(TempUnit unit) {
+    tempUnit_ = unit;
     save();
 }
 
