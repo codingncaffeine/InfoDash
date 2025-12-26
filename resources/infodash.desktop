@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=InfoDash
+Comment=Modern GTK4 dashboard for RSS, weather, and stocks
+Exec=InfoDash
+Icon=infodash
+Terminal=false
+Categories=Utility;News;Finance;Weather;
+StartupNotify=true
