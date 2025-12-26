@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <memory>
 #include <mutex>
+#include <algorithm>
 
 namespace InfoDash {
 
@@ -64,8 +65,54 @@ void RSSService::fetchFeed(const std::string& url, std::function<void(std::vecto
         auto response = client.get(url);
         std::vector<RSSItem> items;
         
+        auto tryParse = [&](const std::string &body) -> std::vector<std::map<std::string, std::string>> {
+            try {
+                return HtmlParser::parseRSSItems(body);
+            } catch (...) {
+                return {};
+            }
+        };
+
         if (response.success) {
             auto parsed = HtmlParser::parseRSSItems(response.body);
+            // If no items found, try autodiscovering an RSS/Atom link from HTML
+            if (parsed.empty()) {
+                HtmlParser parser;
+                if (parser.parse(response.body)) {
+                    // Look for RSS/Atom link elements
+                    std::string href = parser.getAttribute("//link[@rel='alternate' and contains(@type,'rss') or contains(@type,'atom')]", "href");
+                    if (href.empty()) {
+                        // fallback: any link containing 'rss' or 'feed'
+                        href = parser.getAttribute("//link[contains(@href,'rss') or contains(@href,'feed')]", "href");
+                    }
+                    if (!href.empty()) {
+                        // Resolve relative URLs to absolute
+                        auto resolveUrl = [](const std::string &base, const std::string &href) {
+                            if (href.rfind("http://", 0) == 0 || href.rfind("https://", 0) == 0) return href;
+                            // extract scheme and host
+                            size_t s = base.find("://");
+                            std::string scheme = "https";
+                            std::string host = base;
+                            if (s != std::string::npos) {
+                                scheme = base.substr(0, s);
+                                size_t start = s + 3;
+                                size_t end = base.find('/', start);
+                                host = (end == std::string::npos) ? base.substr(start) : base.substr(start, end - start);
+                            }
+                            if (href.rfind("//", 0) == 0) return scheme + ":" + href;
+                            if (href.rfind("/", 0) == 0) return scheme + "://" + host + href;
+                            // relative to base path
+                            size_t pos = base.rfind('/');
+                            std::string basepath = (pos == std::string::npos) ? base : base.substr(0, pos + 1);
+                            return basepath + href;
+                        };
+
+                        std::string feedUrl = resolveUrl(url, href);
+                        auto feedResp = client.get(feedUrl);
+                        if (feedResp.success) parsed = tryParse(feedResp.body);
+                    }
+                }
+            }
             for (const auto& p : parsed) {
                 RSSItem item;
                 item.title = sanitizeUtf8(p.count("title") ? p.at("title") : "");
